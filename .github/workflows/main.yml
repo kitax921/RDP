@@ -1,15 +1,19 @@
 name: Free-RDP-LocalXpose
 
 on:
-  workflow_dispatch:   # jalan manual saja
+  workflow_dispatch:  # Jalan manual saja
 
 jobs:
-  build:
+  rdp-tunnel:
     runs-on: windows-latest
 
     steps:
+    - name: Set PowerShell to bypass policy
+      run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
     - name: Download LocalXpose
-      run: Invoke-WebRequest https://api.localxpose.io/api/releases/lxp/windows/amd64 -OutFile lxp.zip
+      run: |
+        curl -L -o lxp.zip https://localxpose.io/downloads/lxp/windows/amd64
 
     - name: Extract LocalXpose
       run: Expand-Archive lxp.zip -DestinationPath lxp
@@ -21,14 +25,11 @@ jobs:
 
     - name: Enable Remote Desktop
       run: |
-        # Aktifkan RDP
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
-        # Aktifkan firewall
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-        # Pastikan authentication aktif
-        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
 
-    - name: Create local user
+    - name: Create local RDP user
       run: |
         net user $env:RDP_USER $env:RDP_PASSWORD /add
         net localgroup administrators $env:RDP_USER /add
