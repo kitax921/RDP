@@ -16,8 +16,7 @@ jobs:
     # Download LocalXpose
     - name: Download LocalXpose
       shell: powershell
-      run: |
-        curl -L -o lxp.zip https://localxpose.io/downloads/lxp/windows/amd64
+      run: Invoke-WebRequest -Uri "https://localxpose.io/downloads/lxp/windows/amd64" -OutFile lxp.zip -UseBasicParsing
 
     # Extract LocalXpose safely
     - name: Extract LocalXpose
