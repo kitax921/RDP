@@ -1,38 +1,33 @@
 name: Free-RDP-LocalXpose
 
 on:
-  workflow_dispatch:  # Jalan manual saja
+  workflow_dispatch:
 
 jobs:
   rdp-tunnel:
     runs-on: windows-latest
 
     steps:
-    # Set PowerShell Execution Policy
     - name: Set PowerShell ExecutionPolicy
       shell: powershell
       run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
-    # Download LocalXpose
     - name: Download LocalXpose
       shell: powershell
       run: Invoke-WebRequest -Uri "https://localxpose.io/downloads/lxp/windows/amd64" -OutFile lxp.zip -UseBasicParsing
 
-    # Extract LocalXpose safely
     - name: Extract LocalXpose
       shell: powershell
       run: |
         New-Item -ItemType Directory -Force -Path lxp
         Expand-Archive -Path lxp.zip -DestinationPath lxp -Force
 
-    # Authenticate LocalXpose
     - name: Authenticate LocalXpose
       shell: powershell
       run: .\lxp\lxp.exe authtoken $env:LXP_AUTH_TOKEN
       env:
         LXP_AUTH_TOKEN: ${{ secrets.LXP_AUTH_TOKEN }}
 
-    # Enable Remote Desktop
     - name: Enable Remote Desktop
       shell: powershell
       run: |
@@ -40,7 +35,6 @@ jobs:
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
 
-    # Create local user for RDP
     - name: Create local RDP user
       shell: powershell
       run: |
@@ -50,7 +44,11 @@ jobs:
         RDP_USER: ${{ secrets.RDP_USER }}
         RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
 
-    # Start RDP tunnel via LocalXpose
     - name: Start RDP tunnel
       shell: powershell
-      run: .\lxp\lxp.exe tcp --port 3389
+      run: Start-Process -NoNewWindow -FilePath ".\lxp\lxp.exe" -ArgumentList "tcp --port 3389"
+
+    - name: Keep job alive
+      shell: powershell
+      run: |
+        while ($true) { Start-Sleep -Seconds 60 }
