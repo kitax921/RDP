@@ -8,28 +8,42 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Set PowerShell to bypass policy
-      run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+    # Set PowerShell Execution Policy
+    - name: Set PowerShell ExecutionPolicy
+      shell: powershell
+      run: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 
+    # Download LocalXpose
     - name: Download LocalXpose
+      shell: powershell
       run: |
         curl -L -o lxp.zip https://localxpose.io/downloads/lxp/windows/amd64
 
+    # Extract LocalXpose safely
     - name: Extract LocalXpose
-      run: Expand-Archive lxp.zip -DestinationPath lxp
+      shell: powershell
+      run: |
+        New-Item -ItemType Directory -Force -Path lxp
+        Expand-Archive -Path lxp.zip -DestinationPath lxp -Force
 
+    # Authenticate LocalXpose
     - name: Authenticate LocalXpose
+      shell: powershell
       run: .\lxp\lxp.exe authtoken $env:LXP_AUTH_TOKEN
       env:
         LXP_AUTH_TOKEN: ${{ secrets.LXP_AUTH_TOKEN }}
 
+    # Enable Remote Desktop
     - name: Enable Remote Desktop
+      shell: powershell
       run: |
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
 
+    # Create local user for RDP
     - name: Create local RDP user
+      shell: powershell
       run: |
         net user $env:RDP_USER $env:RDP_PASSWORD /add
         net localgroup administrators $env:RDP_USER /add
@@ -37,5 +51,7 @@ jobs:
         RDP_USER: ${{ secrets.RDP_USER }}
         RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
 
-    - name: Start RDP tunnel via LocalXpose
+    # Start RDP tunnel via LocalXpose
+    - name: Start RDP tunnel
+      shell: powershell
       run: .\lxp\lxp.exe tcp --port 3389
