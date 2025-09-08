@@ -1,0 +1,41 @@
+name: Remote-RDP
+
+on: 
+  workflow_dispatch:   # hanya manual trigger
+  push:                # opsional, hapus kalau tidak mau auto jalan
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Download ngrok
+      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+
+    - name: Extract ngrok
+      run: Expand-Archive ngrok.zip -DestinationPath ngrok
+
+    - name: Authenticate ngrok
+      run: .\ngrok\ngrok.exe authtoken $env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Enable Remote Desktop
+      run: |
+        # Aktifkan RDP
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+        # Aktifkan firewall rule
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        # Pastikan user authentication aktif
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+
+    - name: Create local user
+      run: |
+        net user $env:RDP_USER $env:RDP_PASSWORD /add
+        net localgroup administrators $env:RDP_USER /add
+      env:
+        RDP_USER: ${{ secrets.RDP_USER }}
+        RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}
+
+    - name: Start ngrok tunnel (TCP 3389)
+      run: .\ngrok\ngrok.exe tcp 3389
